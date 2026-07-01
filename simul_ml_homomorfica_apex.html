@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoC ML: Predição de Evasão com FHE - Apex-Brasil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === TOTVS CRM STYLE DESIGN SYSTEM (SHARED) === */
+        :root {
+            --totvs-brand: #00BFA5; /* Teal clássico corporativo */
+            --totvs-brand-hover: #009884;
+            --totvs-dark: #1E293B;
+            --totvs-gray-bg: #F8FAFC;
+            --totvs-card-bg: #FFFFFF;
+            --totvs-border: #E2E8F0;
+            --totvs-text: #334155;
+            --totvs-text-light: #64748B;
+            
+            --success-bg: #DCFCE7;
+            --success-text: #166534;
+            --success-border: #BBF7D0;
+            
+            --warning-bg: #FEF9C3;
+            --warning-text: #854D0E;
+            --warning-border: #FEF08A;
+            
+            --danger-bg: #FEE2E2;
+            --danger-text: #991B1B;
+            --danger-border: #FECACA;
+
+            --radius: 6px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--totvs-gray-bg);
+            color: var(--totvs-text);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        /* Typography & Header */
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: var(--totvs-dark); margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: -0.5px; }
+        .header p { color: var(--totvs-text-light); margin: 0; font-size: 0.95rem; }
+        h2 { font-size: 1.05rem; color: var(--totvs-dark); border-bottom: 1px solid var(--totvs-border); padding-bottom: 12px; margin-top: 0; margin-bottom: 20px; font-weight: 600; }
+
+        /* Layouts */
+        .container-stack { max-width: 800px; margin: auto; display: flex; flex-direction: column; gap: 24px; }
+        .container-grid { max-width: 1100px; margin: auto; display: grid; grid-template-columns: 1fr 200px 1fr; gap: 24px; align-items: start; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+        /* Cards */
+        .card { background: var(--totvs-card-bg); padding: 24px; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--totvs-border); border-top: 4px solid var(--totvs-brand); position: relative; }
+        .card.server-card { border-top-color: var(--totvs-dark); background: #FDFDFD; }
+        .transit-area { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%; padding: 20px 0; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-client { background: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
+        .badge-server { background: #F1F5F9; color: #475569; border: 1px solid #E2E8F0; }
+        .badge-transit { background: transparent; color: var(--totvs-text-light); font-weight: 600; font-size: 0.8rem; }
+
+        /* Forms */
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; color: var(--totvs-text); }
+        input[type="number"], input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid var(--totvs-border); border-radius: var(--radius); box-sizing: border-box; font-family: inherit; font-size: 0.95rem; transition: all 0.2s; color: var(--totvs-dark); }
+        input[type="number"]:focus, input[type="text"]:focus { outline: none; border-color: var(--totvs-brand); box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.1); }
+        input[type="range"] { width: 100%; accent-color: var(--totvs-brand); }
+        .val-display { float: right; font-weight: 700; color: var(--totvs-brand); }
+
+        /* Buttons */
+        .btn { background: var(--totvs-dark); color: white; border: none; padding: 12px 16px; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; font-weight: 600; width: 100%; font-size: 0.9rem; font-family: inherit; margin-top: 8px; }
+        .btn:hover { background: #0F172A; }
+        .btn:disabled { background: #CBD5E1; color: #94A3B8; cursor: not-allowed; }
+        .btn-brand { background: var(--totvs-brand); color: #FFFFFF; }
+        .btn-brand:hover { background: var(--totvs-brand-hover); }
+
+        /* Logs & Displays */
+        .log-box { font-family: 'Courier New', monospace; background: #1E293B; color: #10B981; padding: 12px; border-radius: var(--radius); font-size: 0.8rem; border: 1px solid #0F172A; margin-top: 4px; overflow-x: auto; white-space: nowrap; }
+        .log-box.wrap { white-space: pre-wrap; word-break: break-all; }
+        .status-text { font-size: 0.8rem; color: var(--totvs-text-light); margin-top: 8px; font-weight: 500; }
+        .arrow-down { font-size: 1.5rem; color: #CBD5E1; margin: 12px 0; }
+
+        /* Results */
+        .result-box { display: none; background: var(--success-bg); border: 1px solid var(--success-border); padding: 20px; border-radius: var(--radius); margin-top: 24px; text-align: center; }
+        .result-title { font-size: 0.85rem; color: var(--success-text); font-weight: 600; text-transform: uppercase; }
+        .result-val { font-size: 2rem; font-weight: 700; color: var(--success-text); margin: 8px 0; }
+        .result-note { font-size: 0.75rem; color: var(--totvs-text-light); margin-top: 8px; }
+        
+        .mt-20 { margin-top: 20px; }
+        .pt-20 { padding-top: 20px; border-top: 1px dashed var(--totvs-border); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Privacy-Preserving Machine Learning: Predição de Evasão</h1>
+    <p>Simulador de Inferência sobre Dados Cifrados (FHE - Esquema CKKS)</p>
+</div>
+
+<div class="container-grid">
+    <div class="card">
+        <span class="badge badge-client">Ambiente Seguro (GRH)</span>
+        <h2>1. Dados do Colaborador</h2>
+        
+        <div class="form-group">
+            <label>Tempo de Empresa (anos) <span id="valTempo" class="val-display">5</span></label>
+            <input type="range" id="tempo" min="0" max="20" value="5" oninput="document.getElementById('valTempo').innerText = this.value">
+        </div>
+        <div class="form-group">
+            <label>Aumento Salarial Recente (%) <span id="valAumento" class="val-display">10</span></label>
+            <input type="range" id="aumento" min="0" max="30" value="10" oninput="document.getElementById('valAumento').innerText = this.value">
+        </div>
+        <div class="form-group">
+            <label>Avaliação de Desempenho (1-5) <span id="valPerf" class="val-display">3</span></label>
+            <input type="range" id="perf" min="1" max="5" value="3" oninput="document.getElementById('valPerf').innerText = this.value">
+        </div>
+        
+        <button id="btnCifrar" class="btn" onclick="cifrarDados()">Cifrar Atributos (CKKS)</button>
+        
+        <div class="mt-20 pt-20">
+            <h2>4. Resultado Decifrado</h2>
+            <button id="btnDecifrar" class="btn btn-brand" onclick="decifrarResultado()" disabled>Decifrar Predição de Risco</button>
+            <div id="boxResultado" class="result-box">
+                <div class="result-title">Probabilidade de Evasão</div>
+                <div id="riscoFinal" class="result-val">--%</div>
+                <div id="riscoLabel" class="result-note" style="font-weight:bold; font-size:0.85rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="transit-area">
+        <span class="badge badge-transit">Trânsito Seguro (TLS)</span>
+        <div class="arrow-down">⬇️</div>
+        <div id="payloadTransito" class="log-box wrap" style="width: 100%; font-size: 0.7rem; text-align: left; background: #F1F5F9; color: var(--totvs-text-light); border-color: var(--totvs-border);">Aguardando payload...</div>
+        <div class="arrow-down">⬆️</div>
+    </div>
+
+    <div class="card server-card">
+        <span class="badge badge-server">Totvs Cloud (Operador)</span>
+        <h2>2. Recepção de Tensores (FHE)</h2>
+        
+        <div class="form-group">
+            <label>Vetor de Entrada Cifrado (x):</label>
+            <div id="vetorCifrado" class="log-box wrap">...</div>
+        </div>
+        
+        <h2 class="mt-20">3. Inferência Neural (PPML)</h2>
+        <div class="status-text" style="margin-bottom: 16px;">
+            O modelo aplica multiplicações de pesos (W) e aproximações polinomiais sobre o vetor cifrado. Não há decifragem.
+        </div>
+        
+        <button id="btnInferir" class="btn" onclick="executarInferencia()" disabled>Executar Predição [ E(y) ]</button>
+        
+        <div class="form-group mt-20">
+            <label>Risco de Evasão Cifrado E(y):</label>
+            <div id="resultadoCifrado" class="log-box wrap" style="color: #38BDF8; border-color: #0369A1;">...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let simulacao = {
+        vetor: [],
+        resultadoNuvem: null,
+        riscoReal: 0
+    };
+
+    function gerarHashHex() {
+        const chars = '0123456789ABCDEF';
+        let hex = '0x';
+        for (let i = 0; i < 16; i++) {
+            hex += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return hex;
+    }
+
+    function cifrarDados() {
+        const tempo = parseInt(document.getElementById('tempo').value);
+        const aumento = parseInt(document.getElementById('aumento').value);
+        const perf = parseInt(document.getElementById('perf').value);
+
+        // Lógica mockada do Risco Real
+        let baseRisco = 50;
+        baseRisco += (tempo > 3 ? (tempo * 2) : 0);
+        baseRisco -= (aumento * 1.5);
+        baseRisco -= (perf * 5);
+        
+        if(baseRisco < 5) baseRisco = 5;
+        if(baseRisco > 95) baseRisco = 95;
+        simulacao.riscoReal = Math.round(baseRisco);
+
+        simulacao.vetor = [gerarHashHex(), gerarHashHex(), gerarHashHex()];
+        const payloadStr = `[ ${simulacao.vetor.join(', ')} ]`;
+        
+        document.getElementById('payloadTransito').innerText = "Enviando:\n" + payloadStr;
+        document.getElementById('vetorCifrado').innerText = payloadStr;
+        
+        document.getElementById('btnInferir').disabled = false;
+        document.getElementById('btnInferir').innerText = "Executar Predição Neural";
+        document.getElementById('resultadoCifrado').innerText = "...";
+        document.getElementById('boxResultado').style.display = 'none';
+        document.getElementById('btnDecifrar').disabled = true;
+    }
+
+    function executarInferencia() {
+        const btn = document.getElementById('btnInferir');
+        btn.innerText = "Calculando polinômios...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            simulacao.resultadoNuvem = gerarHashHex();
+            document.getElementById('resultadoCifrado').innerText = simulacao.resultadoNuvem;
+            document.getElementById('payloadTransito').innerText = "Retornando:\n" + simulacao.resultadoNuvem;
+            
+            btn.innerText = "Inferência Concluída";
+            document.getElementById('btnDecifrar').disabled = false;
+        }, 1500);
+    }
+
+    function decifrarResultado() {
+        const box = document.getElementById('boxResultado');
+        const label = document.getElementById('riscoLabel');
+        const valRisco = document.getElementById('riscoFinal');
+        const title = box.querySelector('.result-title');
+        
+        box.style.display = 'block';
+        valRisco.innerText = simulacao.riscoReal + "%";
+
+        // Variaveis CSS injetadas de acordo com o risco para manter o padrão Totvs
+        if (simulacao.riscoReal <= 30) {
+            box.style.backgroundColor = 'var(--success-bg)';
+            box.style.borderColor = 'var(--success-border)';
+            valRisco.style.color = 'var(--success-text)';
+            title.style.color = 'var(--success-text)';
+            label.innerText = "Risco Baixo - Retenção Estável";
+            label.style.color = 'var(--success-text)';
+        } else if (simulacao.riscoReal <= 60) {
+            box.style.backgroundColor = 'var(--warning-bg)';
+            box.style.borderColor = 'var(--warning-border)';
+            valRisco.style.color = 'var(--warning-text)';
+            title.style.color = 'var(--warning-text)';
+            label.innerText = "Risco Moderado - Ponto de Atenção";
+            label.style.color = 'var(--warning-text)';
+        } else {
+            box.style.backgroundColor = 'var(--danger-bg)';
+            box.style.borderColor = 'var(--danger-border)';
+            valRisco.style.color = 'var(--danger-text)';
+            title.style.color = 'var(--danger-text)';
+            label.innerText = "Risco Crítico - Possível Evasão";
+            label.style.color = 'var(--danger-text)';
+        }
+    }
+</script>
+
+</body>
+</html>
